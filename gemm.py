@@ -19,11 +19,15 @@ A = org_A.reshape(128, 8, 1, 16).copy()
 B = org_B.reshape(128, 128).copy()
 C = org_C.reshape(128, 8, 1, 16).copy()
 
-# reshape
+# reshape: method 1
 tB = np.zeros((8, 8, 16, 16), 'float32')
 for i in range(0, 8):
     for j in range(0, 8):
         tB[i, j, :, :] = B[16*i:16+16*i, 16*j:16+16*j]
+
+# reshape: method 2
+nB = B.copy().reshape(128//16,16,128//16,16)
+nB = nB.transpose(0,2,1,3)
 
 C = org_C.reshape(128, 8, 1, 16).copy()
 
@@ -39,7 +43,8 @@ for b in range(0, 128):
         for t in range(0, 8):
             # gemm mini
             # C[b, c, :, :] += A[b, t, :, :] @ tB[t, c, :, :]
-            C[b, c, :, :] += gemm_mini(A[b, t, :, :], tB[t, c, :, :])
+            #C[b, c, :, :] += gemm_mini(A[b, t, :, :], tB[t, c, :, :])
+            C[b, c, :, :] += gemm_mini(A[b, t, :, :], nB[t, c, :, :])
 
 C = C.reshape(128, 128)
 # reshape:
@@ -48,12 +53,3 @@ C = C.reshape(128, 128)
 # A copy can be forced by using ndarray.copy()
 np.testing.assert_array_equal(ref_C, C)
 
-# GEMM tile init
-C2 = org_C.reshape(128, 8, 1, 16).copy()
-# 证明外两层 for 没问题
-for b in range(0, 128):
-    for c in range(0, 8):
-        C2[b, c, :, :] = A[b, :, :, :].reshape(1,128) @ tB[:, c, :, :].reshape(128, 16)
-
-C2 = C2.reshape(128, 128)
-np.testing.assert_array_equal(ref_C, C2)
